@@ -51,56 +51,115 @@ download_cloudflared() {
     fi
 
     local filename="cloudflared-linux-${arch}"
-    local mirror_base="${CLOUDFLARED_MIRROR:-}"
-
     mkdir -p "${BIN_DIR}"
 
     log "下载 cloudflared (linux-${arch})..."
 
-    # 下载函数：尝试指定 URL，可选使用 --resolve
+    # 通用下载函数
     try_download() {
         local target_url="$1"
-        local resolve_arg="$2"
         local curl_opts=(-fsSL --connect-timeout 10 --max-time 600)
-        [[ -n "${resolve_arg}" ]] && curl_opts+=(--resolve "${resolve_arg}")
+        if [[ "${2:-}" == "resolve" ]] && [[ -n "${3:-}" ]]; then
+            curl_opts+=(--resolve "${3}")
+        fi
         curl "${curl_opts[@]}" "${target_url}" -o "${dest}"
     }
 
-    # 1. 尝试用户指定的镜像源
-    if [[ -n "${mirror_base}" ]]; then
-        url="${mirror_base}/${filename}"
-        if try_download "${url}"; then
+    # 官方 GitHub URL
+    local official_url="https://github.com/cloudflare/cloudflared/releases/latest/download/${filename}"
+
+    # ── 策略 1：用户自定义镜像（CLOUDFLARED_MIRROR） ──
+    if [[ -n "${CLOUDFLARED_MIRROR:-}" ]]; then
+        local user_url="${CLOUDFLARED_MIRROR}/${filename}"
+        log "  尝试用户镜像: ${CLOUDFLARED_MIRROR}"
+        if try_download "${user_url}"; then
             chmod +x "${dest}"
-            info "cloudflared 下载完成（镜像源）"
+            info "cloudflared 下载完成（用户镜像）"
             return 0
+        else
+            warn "  用户镜像不可用，切换到自动模式"
         fi
     fi
 
-    # 2. 尝试官方源
-    url="https://github.com/cloudflare/cloudflared/releases/latest/download/${filename}"
-    if try_download "${url}"; then
+    # ── 策略 2：内置国内加速镜像列表 ──
+    # 这些镜像都支持 GitHub release 代理，按可用性排序
+    local -a mirrors=(
+        "https://gh-proxy.com/${official_url}"                   # 常用 GitHub 代理
+        "https://ghproxy.net/${official_url}"                     # 备选代理
+        "https://mirror.ghproxy.com/${official_url}"              # 新域名
+        "https://github.moeyy.xyz/${official_url}"                # 国内常用
+        "https://gh.ddlc.top/${official_url}"                     # 国内常用
+        "https://gh.con.sh/${official_url}"                       # 国内常用
+        "https://gh.api.99988866.xyz/${official_url}"             # 国内常用
+        "https://download.fastgit.org/cloudflare/cloudflared/releases/latest/download/${filename}"  # FastGit
+        "https://gh2.yanqishui.work/${official_url}"              # 备选
+    )
+
+    for mirror_url in "${mirrors[@]}"; do
+        log "  尝试加速镜像: ${mirror_url%%/https*}..."
+        if try_download "${mirror_url}"; then
+            chmod +x "${dest}"
+            info "cloudflared 下载完成（加速镜像）"
+            return 0
+        fi
+        warn "  不可用，切换下一个..."
+    done
+
+    # ── 策略 3：官方源直连 ──
+    log "  尝试官方源直连..."
+    if try_download "${official_url}"; then
         chmod +x "${dest}"
         info "cloudflared 下载完成（官方源）"
         return 0
     fi
 
-    # 3. 尝试绕过 DNS 污染：用 Google DNS 解析 release-assets.githubusercontent.com
-    warn "官方源下载失败，尝试绕过 DNS 污染..."
-    local resolved_ip
-    if command -v dig >/dev/null 2>&1; then
-        resolved_ip="$(dig @8.8.8.8 +short release-assets.githubusercontent.com | head -1 || true)"
-    fi
+    # ── 策略 4：官方源 + DNS 绕过（处理国内 DNS 污染） ──
+    warn "  官方源直连失败，尝试 DNS 绕过..."
+    local resolved_ip=""
+    # 用多个 DNS 服务尝试解析
+    for dns in "8.8.8.8" "1.1.1.1" "208.67.222.222" "114.114.114.114"; do
+        if command -v dig >/dev/null 2>&1; then
+            resolved_ip="$(dig @"${dns}" +short release-assets.githubusercontent.com 2>/dev/null | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)"
+        elif command -v nslookup >/dev/null 2>&1; then
+            resolved_ip="$(nslookup release-assets.githubusercontent.com "${dns}" 2>/dev/null | grep -A1 'Name:' | grep 'Address:' | awk '{print $2}' | grep -v ':' | head -1 || true)"
+        fi
+        [[ -n "${resolved_ip}" ]] && break
+    done
 
     if [[ -n "${resolved_ip}" ]]; then
-        warn "解析到 IP: ${resolved_ip}，使用 --resolve 重试..."
-        if try_download "${url}" "release-assets.githubusercontent.com:443:${resolved_ip}"; then
+        warn "  解析到真实 IP: ${resolved_ip}，重试下载..."
+        if try_download "${official_url}" "resolve" "release-assets.githubusercontent.com:443:${resolved_ip}"; then
             chmod +x "${dest}"
             info "cloudflared 下载完成（DNS 绕过）"
             return 0
         fi
     fi
 
-    err "下载 cloudflared 失败。请检查网络连接，或手动下载后放到 ${dest}，或设置 CLOUDFLARED_MIRROR 环境变量"
+    # ── 策略 5：直接用 GitHub 已知 IP 硬编码尝试（最后手段） ──
+    # GitHub assets 常用的 CDN IP 段
+    local -a known_ips=(
+        "185.199.108.133"
+        "185.199.109.133"
+        "185.199.110.133"
+        "185.199.111.133"
+    )
+    for try_ip in "${known_ips[@]}"; do
+        warn "  尝试已知 IP: ${try_ip}..."
+        if try_download "${official_url}" "resolve" "release-assets.githubusercontent.com:443:${try_ip}"; then
+            chmod +x "${dest}"
+            info "cloudflared 下载完成（IP 硬编码）"
+            return 0
+        fi
+    done
+
+    err "下载 cloudflared 失败。"
+    err "已尝试：用户镜像 → 8个国内加速站 → 官方源 → DNS 绕过 → IP 硬编码"
+    err ""
+    err "解决方案："
+    err "  1. 设置 CLOUDFLARED_MIRROR 环境变量指向可用镜像"
+    err "  2. 手动下载 cloudflared 放到 ${dest}"
+    err "  3. 使用 INCLUDE_CLOUDFLARED=1 打包含二进制版本在内网分发"
+    err "  下载地址: ${official_url}"
 }
 
 cloudflared_login() {
