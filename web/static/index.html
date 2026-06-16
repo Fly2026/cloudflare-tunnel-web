@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CFWEB 管理平台</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 登录页面 -->
+        <div id="login-page" class="login-page">
+            <div class="login-box">
+                <h1>CFWEB</h1>
+                <p class="subtitle">Cloudflare Tunnel 管理平台</p>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label>用户名</label>
+                        <input type="text" id="login-username" value="admin" required>
+                    </div>
+                    <div class="form-group">
+                        <label>密码</label>
+                        <input type="password" id="login-password" value="admin" required>
+                    </div>
+                    <div id="login-error" class="error-msg"></div>
+                    <button type="submit" class="btn btn-primary btn-block">登录</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- 主界面 -->
+        <div id="main-app" class="main-app hidden">
+            <header class="header">
+                <div class="header-left">
+                    <h1>CFWEB 管理平台</h1>
+                </div>
+                <div class="header-right">
+                    <span id="tunnel-status" class="status-badge status-stopped">Tunnel 未运行</span>
+                    <button id="logout-btn" class="btn btn-sm">退出</button>
+                </div>
+            </header>
+
+            <div class="container">
+                <aside class="sidebar">
+                    <nav>
+                        <a href="#/dashboard" class="nav-link active" data-page="dashboard">📊 仪表盘</a>
+                        <a href="#/config" class="nav-link" data-page="config">⚙️ 配置管理</a>
+                        <a href="#/services" class="nav-link" data-page="services">🌐 服务映射</a>
+                        <a href="#/setup" class="nav-link" data-page="setup">🚀 安装部署</a>
+                        <a href="#/tunnel" class="nav-link" data-page="tunnel">🔌 Tunnel 管理</a>
+                        <a href="#/logs" class="nav-link" data-page="logs">📄 日志查看</a>
+                        <a href="#/package" class="nav-link" data-page="package">📦 打包分发</a>
+                    </nav>
+                </aside>
+
+                <main class="content" id="content">
+                    <!-- 页面内容动态加载 -->
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提示框 -->
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- 确认框 -->
+    <div id="confirm-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3 id="confirm-title">确认</h3>
+            <p id="confirm-message">确定执行此操作吗？</p>
+            <div class="modal-actions">
+                <button id="confirm-cancel" class="btn">取消</button>
+                <button id="confirm-ok" class="btn btn-danger">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

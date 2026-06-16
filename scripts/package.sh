@@ -26,6 +26,7 @@ tar -czf "${OUTPUT}" \
     --exclude='credentials/*.json' \
     --exclude='bin/cloudflared' \
     --exclude='config.yml' \
+    --exclude='config.json' \
     --exclude='*.tar.gz' \
     --exclude='.git' \
     --exclude='__pycache__' \

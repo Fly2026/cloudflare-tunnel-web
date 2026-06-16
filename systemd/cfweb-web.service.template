@@ -1,0 +1,17 @@
+[Unit]
+Description=CFWEB Web Management Platform
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{USER}}
+WorkingDirectory={{CFWEB_DIR}}
+ExecStart=/usr/bin/python3 {{CFWEB_DIR}}/web/server.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:{{CFWEB_DIR}}/logs/web.log
+StandardError=append:{{CFWEB_DIR}}/logs/web.log
+
+[Install]
+WantedBy=multi-user.target

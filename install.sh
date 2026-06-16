@@ -50,3 +50,26 @@ chmod 600 "${CONFIG_FILE}" 2>/dev/null || true
 
 # 执行核心安装
 bash "${CFWEB_DIR}/scripts/setup.sh"
+
+# 启动 Web 管理平台
+if [[ "${START_WEB:-0}" == "1" ]]; then
+    info "正在启动 Web 管理平台..."
+    bash "${CFWEB_DIR}/scripts/start-web.sh"
+fi
+
+info "=========================================="
+info "CFWEB 安装完成！"
+info "=========================================="
+if [[ "${START_WEB:-0}" == "1" ]]; then
+    web_port="$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}')).get('web', {}).get('port', 50000))")"
+    echo "Web 管理平台: http://<服务器IP>:${web_port}"
+    echo "默认账号: admin"
+    echo "默认密码: admin"
+    echo ""
+fi
+echo "管理命令:"
+echo "  启动 tunnel: ${CFWEB_DIR}/scripts/start-tunnel.sh"
+echo "  停止 tunnel: ${CFWEB_DIR}/scripts/stop-tunnel.sh"
+echo "  启动 Web:    ${CFWEB_DIR}/scripts/start-web.sh"
+echo "  停止 Web:    ${CFWEB_DIR}/scripts/stop-web.sh"
+echo "  查看状态:    ${CFWEB_DIR}/scripts/status.sh"
