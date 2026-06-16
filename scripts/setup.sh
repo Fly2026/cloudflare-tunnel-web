@@ -164,24 +164,28 @@ download_cloudflared() {
 
 cloudflared_login() {
     local cert_file="${CRED_DIR}/cert.pem"
+
     if [[ -f "${cert_file}" ]]; then
         info "cloudflared 已登录 (${cert_file})"
         return 0
     fi
 
     log "执行 cloudflared 登录..."
+    log "新版 cloudflared 使用默认凭证目录 ~/.cloudflared/"
     log "如果当前机器没有浏览器，请将弹出的 URL 复制到本地浏览器完成授权。"
-    "${BIN_DIR}/cloudflared" tunnel login --cred-file "${cert_file}" || err "cloudflared 登录失败"
 
-    # 如果 cloudflared 仍把 cert.pem 写到默认位置，复制到我们的目录
+    # 新版 cloudflared 不再支持 --cred-file，默认写入 ~/.cloudflared/cert.pem
+    "${BIN_DIR}/cloudflared" tunnel login || err "cloudflared 登录失败"
+
+    # 从默认位置复制到我们的凭证目录
     local default_cert="${HOME}/.cloudflared/cert.pem"
-    if [[ ! -f "${cert_file}" && -f "${default_cert}" ]]; then
+    if [[ -f "${default_cert}" ]]; then
         cp "${default_cert}" "${cert_file}"
+        chmod 600 "${cert_file}"
+        info "cloudflared 登录成功，凭证已保存到 ${cert_file}"
+    else
+        err "未找到登录凭证文件 ${default_cert}"
     fi
-
-    [[ -f "${cert_file}" ]] || err "未找到登录凭证文件"
-    chmod 600 "${cert_file}"
-    info "cloudflared 登录成功"
 }
 
 create_tunnel() {
