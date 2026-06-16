@@ -1,0 +1,23 @@
+{
+  "domain": "example.com",
+  "tunnel_name": "cfweb-tunnel",
+  "aliyun": {
+    "access_key_id": "LTAIxxxxxxxxxxxx",
+    "access_key_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "region": "cn-hangzhou"
+  },
+  "services": [
+    {
+      "folder": "blog",
+      "host": "localhost",
+      "port": 3000,
+      "description": "博客服务"
+    },
+    {
+      "folder": "api",
+      "host": "192.168.1.10",
+      "port": 8080,
+      "description": "内网 API 服务"
+    }
+  ]
+}

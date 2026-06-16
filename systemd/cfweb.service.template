@@ -1,0 +1,17 @@
+[Unit]
+Description=CFWEB Cloudflare Tunnel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{USER}}
+WorkingDirectory={{CFWEB_DIR}}
+ExecStart={{CFWEB_DIR}}/bin/cloudflared tunnel --config {{CFWEB_DIR}}/config.yml run
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:{{CFWEB_DIR}}/logs/tunnel.log
+StandardError=append:{{CFWEB_DIR}}/logs/tunnel.log
+
+[Install]
+WantedBy=multi-user.target

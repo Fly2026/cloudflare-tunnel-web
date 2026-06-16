@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# CFWEB 运行时文件（不上传）
+bin/cloudflared
+credentials/*
+logs/*.log
+tmp/*
+config.yml
+*.tar.gz
+
+# 用户实际配置（包含敏感信息）
+config.json
+
+# Git
+.git/
