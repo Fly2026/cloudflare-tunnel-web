@@ -50,6 +50,34 @@ def validate_config(config: dict) -> tuple:
         except (TypeError, ValueError):
             return False, f"第 {i+1} 个服务 port 必须是 1-65535 的整数"
 
+    # 阿里云凭证基础校验
+    aliyun = config.get("aliyun", {})
+    if aliyun:
+        secret = aliyun.get("access_key_secret", "")
+        if secret and len(secret) < 20:
+            return False, "阿里云 AccessKey Secret 长度异常，请检查是否复制完整（正常为 30 位）"
+
+    return True, ""
+
+
+def validate_services(services: list) -> tuple:
+    """单独验证 services 数组。"""
+    if not isinstance(services, list):
+        return False, "services 必须是数组"
+    folder_pattern = re.compile(r"^[a-zA-Z0-9-]+$")
+    for i, svc in enumerate(services):
+        folder = svc.get("folder", "").strip()
+        if not folder:
+            return False, f"第 {i+1} 个服务 folder 不能为空"
+        if not folder_pattern.match(folder):
+            return False, f"第 {i+1} 个服务 folder 只能包含英文、数字、连字符"
+        port = svc.get("port")
+        try:
+            port = int(port)
+            if not (1 <= port <= 65535):
+                raise ValueError
+        except (TypeError, ValueError):
+            return False, f"第 {i+1} 个服务 port 必须是 1-65535 的整数"
     return True, ""
 
 
@@ -117,10 +145,10 @@ def get_services_handler(query, body, headers):
 def post_services_handler(query, body, headers):
     """POST /api/config/services"""
     services = body.get("services", [])
-    config = load_config()
-    config["services"] = services
-    valid, error = validate_config(config)
+    valid, error = validate_services(services)
     if not valid:
         return 400, {"success": False, "error": error}, {}
+    config = load_config()
+    config["services"] = services
     save_config(config)
     return 200, {"success": True, "services": services}, {}

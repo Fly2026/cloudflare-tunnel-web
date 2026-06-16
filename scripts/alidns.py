@@ -26,7 +26,8 @@ ENDPOINT = "https://alidns.aliyuncs.com"
 def sign(access_key_secret: str, parameters: dict) -> str:
     """生成阿里云 V1.0 HMAC-SHA1 签名。"""
     sorted_params = sorted(parameters.items())
-    canonical_query = urllib.parse.urlencode(sorted_params)
+    # 使用 quote_via=quote 而不是默认 quote_plus，确保空格编码为 %20
+    canonical_query = urllib.parse.urlencode(sorted_params, quote_via=urllib.parse.quote)
     # 对 canonical query 再次编码，参与待签名字符串
     encoded_query = urllib.parse.quote(canonical_query, safe="")
     string_to_sign = f"GET&{urllib.parse.quote('/', safe='')}&{encoded_query}"
