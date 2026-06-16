@@ -17,22 +17,28 @@ info() { echo -e "${GREEN}[CFWEB-Package]${NC} $*"; }
 
 log "打包 CFWEB 项目..."
 
+EXCLUDES=(
+    --exclude='*.log'
+    --exclude='tmp/*'
+    --exclude='credentials/*.pem'
+    --exclude='credentials/*.json'
+    --exclude='config.yml'
+    --exclude='config.json'
+    --exclude='*.tar.gz'
+    --exclude='.git'
+    --exclude='__pycache__'
+    --exclude='*.pyc'
+    --exclude='*.pyo'
+)
+
+# 默认排除 cloudflared 二进制（架构可能不同），需要包含时设置 INCLUDE_CLOUDFLARED=1
+if [[ "${INCLUDE_CLOUDFLARED:-0}" != "1" ]]; then
+    EXCLUDES+=(--exclude='bin/cloudflared')
+fi
+
 cd "$(dirname "${CFWEB_DIR}")"
 
-tar -czf "${OUTPUT}" \
-    --exclude='*.log' \
-    --exclude='tmp/*' \
-    --exclude='credentials/*.pem' \
-    --exclude='credentials/*.json' \
-    --exclude='bin/cloudflared' \
-    --exclude='config.yml' \
-    --exclude='config.json' \
-    --exclude='*.tar.gz' \
-    --exclude='.git' \
-    --exclude='__pycache__' \
-    --exclude='*.pyc' \
-    --exclude='*.pyo' \
-    "$(basename "${CFWEB_DIR}")"
+tar -czf "${OUTPUT}" "${EXCLUDES[@]}" "$(basename "${CFWEB_DIR}")"
 
 info "打包完成: ${OUTPUT}"
 echo ""
