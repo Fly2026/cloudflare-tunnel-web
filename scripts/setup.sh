@@ -50,11 +50,57 @@ download_cloudflared() {
         return 0
     fi
 
-    url="https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${arch}"
+    local filename="cloudflared-linux-${arch}"
+    local mirror_base="${CLOUDFLARED_MIRROR:-}"
+
+    mkdir -p "${BIN_DIR}"
+
     log "下载 cloudflared (linux-${arch})..."
-    curl -fL --progress-bar "${url}" -o "${dest}" || err "下载 cloudflared 失败"
-    chmod +x "${dest}"
-    info "cloudflared 下载完成"
+
+    # 下载函数：尝试指定 URL，可选使用 --resolve
+    try_download() {
+        local target_url="$1"
+        local resolve_arg="$2"
+        local curl_opts=(-fsSL --connect-timeout 10 --max-time 600)
+        [[ -n "${resolve_arg}" ]] && curl_opts+=(--resolve "${resolve_arg}")
+        curl "${curl_opts[@]}" "${target_url}" -o "${dest}"
+    }
+
+    # 1. 尝试用户指定的镜像源
+    if [[ -n "${mirror_base}" ]]; then
+        url="${mirror_base}/${filename}"
+        if try_download "${url}"; then
+            chmod +x "${dest}"
+            info "cloudflared 下载完成（镜像源）"
+            return 0
+        fi
+    fi
+
+    # 2. 尝试官方源
+    url="https://github.com/cloudflare/cloudflared/releases/latest/download/${filename}"
+    if try_download "${url}"; then
+        chmod +x "${dest}"
+        info "cloudflared 下载完成（官方源）"
+        return 0
+    fi
+
+    # 3. 尝试绕过 DNS 污染：用 Google DNS 解析 release-assets.githubusercontent.com
+    warn "官方源下载失败，尝试绕过 DNS 污染..."
+    local resolved_ip
+    if command -v dig >/dev/null 2>&1; then
+        resolved_ip="$(dig @8.8.8.8 +short release-assets.githubusercontent.com | head -1 || true)"
+    fi
+
+    if [[ -n "${resolved_ip}" ]]; then
+        warn "解析到 IP: ${resolved_ip}，使用 --resolve 重试..."
+        if try_download "${url}" "release-assets.githubusercontent.com:443:${resolved_ip}"; then
+            chmod +x "${dest}"
+            info "cloudflared 下载完成（DNS 绕过）"
+            return 0
+        fi
+    fi
+
+    err "下载 cloudflared 失败。请检查网络连接，或手动下载后放到 ${dest}，或设置 CLOUDFLARED_MIRROR 环境变量"
 }
 
 cloudflared_login() {
