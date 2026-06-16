@@ -477,13 +477,14 @@
                     <button id="btn-start-setup" class="btn btn-primary">开始安装</button>
                 </div>
 
-                <div id="setup-login-url" style="margin: 16px 0; display: none;">
-                    <div class="card" style="background: #fef3c7;">
-                        <h3>需要浏览器授权</h3>
-                        <p>请在浏览器中打开以下 URL 完成 Cloudflare 授权：</p>
-                        <div id="login-url-text" style="word-break: break-all; font-family: monospace; margin: 12px 0;"></div>
-                        <button id="btn-login-done" class="btn btn-success">已完成授权，继续</button>
-                    </div>
+                <div id="setup-login-url" class="card" style="margin: 16px 0; display: none; background: #fef3c7; border-left: 4px solid #f59e0b;">
+                    <h3>🌐 需要浏览器授权</h3>
+                    <p>请在浏览器中打开以下 URL 完成 Cloudflare 授权：</p>
+                    <a id="login-url-link" href="#" target="_blank" rel="noopener noreferrer" style="display: inline-block; word-break: break-all; font-family: monospace; margin: 12px 0; padding: 10px 14px; background: #fff; border-radius: 6px; border: 1px solid #f59e0b; color: #b45309; text-decoration: none;">
+                        点击跳转授权页面 →
+                    </a>
+                    <div id="login-url-text" style="word-break: break-all; font-family: monospace; margin-bottom: 12px; color: #666; font-size: 12px;"></div>
+                    <button id="btn-login-done" class="btn btn-success">已完成授权，继续</button>
                 </div>
 
                 <div id="setup-output" class="output-area hidden"></div>
@@ -527,11 +528,15 @@
 
             // 检测登录 URL
             const match = line.match(/https:\/\/\S+/);
-            if (match && line.toLowerCase().includes('login') || line.toLowerCase().includes('授权') || line.toLowerCase().includes('url')) {
+            if (match && (line.toLowerCase().includes('login') || line.toLowerCase().includes('授权') || line.toLowerCase().includes('url') || line.toLowerCase().includes('browser'))) {
                 const urlBox = document.getElementById('setup-login-url');
+                const linkEl = document.getElementById('login-url-link');
+                const textEl = document.getElementById('login-url-text');
                 if (urlBox) {
                     urlBox.style.display = 'block';
-                    document.getElementById('login-url-text').textContent = match[0];
+                    linkEl.href = match[0];
+                    linkEl.textContent = '点击跳转授权页面 → ' + match[0];
+                    textEl.textContent = match[0];
                 }
             }
 
